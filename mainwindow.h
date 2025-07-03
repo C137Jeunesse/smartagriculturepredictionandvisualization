@@ -1,28 +1,25 @@
-// --- START OF FILE mainwindow.h ---
 
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QtSql/QSqlDatabase>
-#include <QtCharts/QChartGlobal>
+#include <QDialog>
 #include <memory>
+#include <vector> // Required for std::vector
 #include "prediction.h"
-#include<QDialog>
 
-// Forward declarations
 QT_BEGIN_NAMESPACE
 class QAction;
-class QWidget;
+class QSplitter;
 class QComboBox;
 class QDateTimeEdit;
 class QPushButton;
 class QCheckBox;
 class QSpinBox;
+class QWidget;
 class QLabel;
 class QTimer;
 class QTextEdit;
-class QSplitter;
 class QChartView;
 class QChart;
 class QLineSeries;
@@ -39,26 +36,22 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = nullptr);
+    // **MODIFIED**: Constructor now accepts a vector of crop IDs
+    explicit MainWindow(const std::vector<int>& userCropIds, QWidget *parent = nullptr);
     ~MainWindow();
 
-    // 公共方法，以便对话框可以调用
+    bool initialize();
     void refreshSuggestion(SystemSuggestionDialog* dialog);
 
 private slots:
-    // UI Action Slots
     void onLoadDataClicked();
     void onRefreshClicked();
-    void onAutoRefreshToggled(bool enabled);
     void onSystemSuggestionClicked();
     void onRetrainModelClicked(bool isFirstRun = false);
     void onExportDataClicked();
     void showAboutDialog();
-
-    // Chart Interaction Slots
     void onSeriesHovered(const QPointF &point, bool state);
-
-    // Internal Update Slots
+    void onAutoRefreshToggled(bool enabled);
     void updateDataAuto();
     void updateDashboard();
     void onStartTimeChanged(const QDateTime &dateTime);
@@ -72,54 +65,33 @@ private:
     void initChart();
     void setupConnections();
     void populateCropAreaCombo();
+    void loadAndDisplayData();
+    QString getCurrentEnvironmentData();
+    void updatePieChart(int cropAreaId, const QDateTime &startTime, const QDateTime &endTime);
     void initFertilizerPredictionSystem();
 
-    void loadAndDisplayData();
-    void createSampleData();
-    QString getCurrentEnvironmentData();
-    QMap<int, double> getLatestDataForCurrentArea();
-
-    void updatePieChart(int cropAreaId, const QDateTime &startTime, const QDateTime &endTime);
+    std::vector<int> m_userCropIds;
 
     // --- UI Components ---
-    QAction *m_retrainAction;
-    QAction *m_exportAction;
-    QAction *m_aboutAction;
-
+    QAction *m_retrainAction, *m_exportAction, *m_aboutAction;
     QWidget *m_centralWidget;
-    QSplitter *m_mainSplitter;
-    QSplitter *m_chartSplitter; // Re-add chart splitter
-
-    GaugeWidget *m_tempGauge;
-    GaugeWidget *m_humidityGauge;
-
-    QComboBox *m_cropAreaCombo;
-    QComboBox *m_dataTypeCombo;
-    QDateTimeEdit *m_startTimeEdit;
-    QDateTimeEdit *m_endTimeEdit;
-    QPushButton *m_loadButton;
-    QPushButton *m_refreshButton;
+    QSplitter *m_mainSplitter, *m_chartSplitter;
+    GaugeWidget *m_tempGauge, *m_humidityGauge;
+    QComboBox *m_cropAreaCombo, *m_dataTypeCombo;
+    QDateTimeEdit *m_startTimeEdit, *m_endTimeEdit;
+    QPushButton *m_loadButton, *m_systemSuggestionButton;
     QCheckBox *m_autoRefreshCheckBox;
     QSpinBox *m_refreshIntervalSpinBox;
-    QPushButton *m_systemSuggestionButton;
-
     QLabel *m_chartTooltip;
-
-    // Chart Views
-    QChartView *m_chartView;
-    QChartView *m_pieChartView; // Re-add pie chart view
-
-    QChart *m_chart;
-    QChart *m_pieChart;
+    QChartView *m_chartView, *m_pieChartView;
+    QChart *m_chart, *m_pieChart;
     QLineSeries *m_series;
     QPieSeries *m_pieSeries;
     QDateTimeAxis *m_axisX;
     QValueAxis *m_axisY;
 
     // --- Backend Components ---
-    QSqlDatabase m_db;
-    QTimer *m_autoRefreshTimer;
-    QTimer *m_dashboardUpdateTimer;
+    QTimer *m_autoRefreshTimer, *m_dashboardUpdateTimer;
     std::unique_ptr<FertilizerPrediction::FertilizerPredictionSystem> m_predictionSystem;
     bool m_predictionSystemReady;
 };
@@ -128,17 +100,13 @@ private:
 class SystemSuggestionDialog : public QDialog
 {
     Q_OBJECT
-
 public:
     explicit SystemSuggestionDialog(MainWindow* mainWindow, QWidget *parent = nullptr);
     void setSuggestionData(const std::vector<FertilizerPrediction::PredictionResult> &results, const QString &wateringTip);
-
 signals:
     void refreshRequested(SystemSuggestionDialog* dialog);
-
 private:
     QTextEdit *m_contentTextEdit;
-    void setupUI();
 };
 
 #endif // MAINWINDOW_H
