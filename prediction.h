@@ -1,25 +1,20 @@
 #ifndef PREDICTION_H
 #define PREDICTION_H
-#include<unordered_map>
+
 #include <string>
 #include <vector>
 #include <memory>
-#include <utility> // For std::pair
-#include <iosfwd>  // For std::ostream and std::istream forward declarations
+#include <utility>
+#include <iosfwd>
+#include <QDebug>
+#include <QFileInfo>
 
 namespace FertilizerPrediction {
 
-// Data structures
+// Data Structures
 struct FertilizerDataPoint {
-    double temperature;
-    double humidity;
-    double moisture;
-    std::string soilType;
-    std::string cropType;
-    double nitrogen;
-    double potassium;
-    double phosphorous;
-    std::string fertilizer;
+    double temperature, humidity, moisture, nitrogen, potassium, phosphorous;
+    std::string soilType, cropType, fertilizer;
 };
 
 struct PredictionResult {
@@ -27,51 +22,58 @@ struct PredictionResult {
     double confidence;
 };
 
-// Classes
+// Class Declarations
 class FeatureEncoder;
 class DecisionTreeClassifier;
 class RandomForestClassifier;
 class FertilizerPredictionSystem;
 
+// Full Class Definitions (Declarations Only)
 class FeatureEncoder {
 public:
     FeatureEncoder();
-    int encodeSoilType(const std::string& soilType);
-    int encodeCropType(const std::string& cropType);
-    int encodeFertilizer(const std::string& fertilizer);
+    int encodeSoilType(const std::string& type);
+    int encodeCropType(const std::string& type);
+    int encodeFertilizer(const std::string& type);
+    std::string decodeFertilizer(int code) const;
+    void serialize(std::ostream& os) const;
+    void deserialize(std::istream& is);
 private:
-    friend class DecisionTreeClassifier; // Allow access for internal logic
-    std::unordered_map<std::string, int> soilTypeMap;
-    std::unordered_map<std::string, int> cropTypeMap;
-    std::unordered_map<std::string, int> fertilizerMap;
-    int nextSoilTypeCode;
-    int nextCropTypeCode;
-    int nextFertilizerCode;
+    friend class DecisionTreeClassifier;
+    std::unordered_map<std::string, int> soilTypeMap, cropTypeMap, fertilizerMap;
+    int nextSoilTypeCode, nextCropTypeCode, nextFertilizerCode;
 };
 
 class DecisionTreeClassifier {
 public:
-    explicit DecisionTreeClassifier(FeatureEncoder& encoder);
-    void train(const std::vector<FertilizerDataPoint>& data);
-    std::string predict(double t, double h, double m, const std::string& s, const std::string& c, double n, double k, double p);
-    void saveModel(std::ostream& out) const;
-    void loadModel(std::istream& in);
+    explicit DecisionTreeClassifier(FeatureEncoder* encoder);
+    ~DecisionTreeClassifier(); // Add destructor declaration
+    DecisionTreeClassifier(DecisionTreeClassifier&& other) noexcept; // Add move constructor declaration
+    DecisionTreeClassifier& operator=(DecisionTreeClassifier&& other) noexcept; // Add move assignment declaration
+
+    void train(const std::vector<FertilizerDataPoint*>& data);
+    std::string predict(const FertilizerDataPoint& point) const;
+    void serialize(std::ostream& os) const;
+    void deserialize(std::istream& is);
 private:
     struct DecisionTreeNode;
-    FeatureEncoder& encoder;
-    std::shared_ptr<DecisionTreeNode> root;
+    FeatureEncoder* encoder;
+    std::unique_ptr<DecisionTreeNode> root;
+    int getFeatureValue(const FertilizerDataPoint& point, int featureIndex) const;
+    std::string predictRecursive(const DecisionTreeNode* node, const FertilizerDataPoint& point) const;
 };
 
 class RandomForestClassifier {
 public:
-    explicit RandomForestClassifier(FeatureEncoder& encoder);
-    void train(const std::vector<FertilizerDataPoint>& data);
+    explicit RandomForestClassifier(FeatureEncoder* encoder, int n_trees = 50);
+    void train(std::vector<FertilizerDataPoint>& data);
     std::pair<std::vector<PredictionResult>, std::string> predictWithConfidence(const std::string& input);
-    void saveModel(std::ostream& out) const;
-    void loadModel(std::istream& in);
+    void serialize(std::ostream& os) const;
+    void deserialize(std::istream& is);
 private:
-    std::vector<DecisionTreeClassifier> trees;
-    FeatureEncoder& encoder;
+    std::vector<std::unique_ptr<DecisionTreeClassifier>> trees;
+    FeatureEncoder* encoder;
+    int numTrees;
 };
 
 class FertilizerPredictionSystem {
@@ -91,6 +93,7 @@ private:
     bool isModelTrained;
 };
 
-} // namespace FertilizerPrediction
+FertilizerDataPoint parseInputString(const std::string& input);
 
+} // namespace
 #endif // PREDICTION_H

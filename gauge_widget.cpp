@@ -73,3 +73,5 @@ void GaugeWidget::paintEvent(QPaintEvent *)
     painter.setFont(font);
     painter.drawText(QRectF(-100, 70, 200, 30), Qt::AlignCenter, m_title);
 }
+
+GaugeWidget::~GaugeWidget() {}
