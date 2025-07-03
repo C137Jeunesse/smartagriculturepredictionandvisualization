@@ -1,8 +1,9 @@
-#ifndef GAUGEWIDGET_H
-#define GAUGEWIDGET_H
+#ifndef GAUGE_WIDGET_H
+#define GAUGE_WIDGET_H
 
 #include <QWidget>
 #include <QColor>
+#include <QString>
 
 class GaugeWidget : public QWidget
 {
@@ -10,6 +11,7 @@ class GaugeWidget : public QWidget
 
 public:
     explicit GaugeWidget(const QString &title, const QString &unit, QWidget *parent = nullptr);
+    ~GaugeWidget() override;
     void setRange(double min, double max);
     void setValue(double value);
 
@@ -25,4 +27,4 @@ private:
     QColor m_arcColor;
 };
 
-#endif // GAUGEWIDGET_H
+#endif // GAUGE_WIDGET_H
